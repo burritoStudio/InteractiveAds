@@ -8,7 +8,7 @@ export default function Play() {
     useEffect(() => {
 
         const conn = new signalR.HubConnectionBuilder()
-            .withUrl("http://192.168.1.10:5211/game")
+            .withUrl(" https://subventrally-excogitable-duncan.ngrok-free.dev/game")
             .withAutomaticReconnect()
             .build();
 

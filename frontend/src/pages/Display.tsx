@@ -6,7 +6,7 @@ export default function Display() {
 
     useEffect(() => {
         const connection = new signalR.HubConnectionBuilder()
-            .withUrl("http://192.168.1.10:5211/game")
+            .withUrl(" https://subventrally-excogitable-duncan.ngrok-free.dev/game")
             .withAutomaticReconnect()
             .build();
 
