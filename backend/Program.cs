@@ -1,17 +1,14 @@
-using Microsoft.AspNetCore.SignalR;
+﻿using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
-
-builder.Services.AddSignalR();
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("cors", policy =>
     {
         policy
-            //.WithOrigins("http://localhost:5173", "http://192.168.1.10:5173")
             .AllowAnyHeader()
             .AllowAnyMethod()
             .SetIsOriginAllowed(_ => true)
@@ -22,8 +19,10 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 app.UseWebSockets();
-
 app.UseCors("cors");
+
+// 🔥 CLIENTES CONECTADOS (THREAD SAFE)
+var clients = new ConcurrentDictionary<Guid, WebSocket>();
 
 app.Map("/ws", async context =>
 {
@@ -33,28 +32,52 @@ app.Map("/ws", async context =>
         return;
     }
 
-    using var socket = await context.WebSockets.AcceptWebSocketAsync();
+    var socket = await context.WebSockets.AcceptWebSocketAsync();
 
-    Console.WriteLine("Cliente WebSocket conectado");
+    var id = Guid.NewGuid();
+    clients.TryAdd(id, socket);
+
+    Console.WriteLine("Cliente conectado");
 
     var buffer = new byte[1024];
 
-    while (socket.State == WebSocketState.Open)
+    try
     {
-        var result = await socket.ReceiveAsync(buffer, CancellationToken.None);
+        while (socket.State == WebSocketState.Open)
+        {
+            var result = await socket.ReceiveAsync(buffer, CancellationToken.None);
 
-        if (result.MessageType == WebSocketMessageType.Close)
-            break;
+            if (result.MessageType == WebSocketMessageType.Close)
+                break;
 
-        var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
+            var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
 
-        Console.WriteLine($"Recibido: {message}");
+            Console.WriteLine($"Recibido: {message}");
+
+            // 🔥 BROADCAST A TODOS LOS CLIENTES
+            var data = Encoding.UTF8.GetBytes(message);
+
+            foreach (var client in clients)
+            {
+                if (client.Value.State == WebSocketState.Open)
+                {
+                    await client.Value.SendAsync(
+                        data,
+                        WebSocketMessageType.Text,
+                        true,
+                        CancellationToken.None
+                    );
+                }
+            }
+        }
     }
-
-    Console.WriteLine("Cliente desconectado");
+    finally
+    {
+        clients.TryRemove(id, out _);
+        socket.Dispose();
+        Console.WriteLine("Cliente desconectado");
+    }
 });
-
-app.MapHub<GameHub>("/game");
 
 app.MapGet("/", () => "Backend OK");
 

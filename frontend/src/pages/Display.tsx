@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+﻿import { useEffect, useState, useRef } from "react";
 
 export default function Display() {
 
@@ -7,32 +7,37 @@ export default function Display() {
 
     useEffect(() => {
 
-        socket.current = new WebSocket("wss://subventrally-excogitable-duncan.ngrok-free.dev/ws");
+        const ws = new WebSocket("wss://subventrally-excogitable-duncan.ngrok-free.dev/ws");
+        socket.current = ws;
 
-        socket.current.onopen = () => {
+        ws.onopen = () => {
             console.log("Display conectado");
         };
 
-        socket.current.onmessage = (event) => {
-            const msg = event.data;
+        ws.onmessage = (event) => {
 
-            console.log("Recibido:", msg);
+            const msg = String(event.data).trim(); // 🔥 FIX CLAVE
 
-            if (msg === "left") {
-                setX(prev => prev - 20);
-            }
+            console.log("Recibido RAW:", event.data);
+            console.log("Recibido CLEAN:", msg);
 
-            if (msg === "right") {
-                setX(prev => prev + 20);
-            }
+            setX(prev => {
+                if (msg === "left") return prev - 20;
+                if (msg === "right") return prev + 20;
+                return prev;
+            });
         };
 
-        socket.current.onerror = (e) => {
+        ws.onerror = (e) => {
             console.log("Error WebSocket", e);
         };
 
+        ws.onclose = () => {
+            console.log("Display desconectado");
+        };
+
         return () => {
-            socket.current?.close();
+            ws.close();
         };
 
     }, []);
@@ -52,7 +57,8 @@ export default function Display() {
                 background: "red",
                 position: "absolute",
                 top: 200,
-                left: x
+                left: x,
+                transition: "left 0.05s linear" // 🔥 suaviza movimiento
             }} />
         </div>
     );
