@@ -1,31 +1,40 @@
-import { useEffect, useState } from "react";
-import * as signalR from "@microsoft/signalr";
+import { useEffect, useState, useRef } from "react";
 
 export default function Display() {
+
     const [x, setX] = useState(100);
+    const socket = useRef<WebSocket | null>(null);
 
     useEffect(() => {
-        const connection = new signalR.HubConnectionBuilder()
-            .withUrl("https://subventrally-excogitable-duncan.ngrok-free.dev/game")
-            .withAutomaticReconnect()
-            .build();
 
-        connection.on("move", (direction: string) => {
-            if (direction === "left") {
+        socket.current = new WebSocket("wss://subventrally-excogitable-duncan.ngrok-free.dev/ws");
+
+        socket.current.onopen = () => {
+            console.log("Display conectado");
+        };
+
+        socket.current.onmessage = (event) => {
+            const msg = event.data;
+
+            console.log("Recibido:", msg);
+
+            if (msg === "left") {
                 setX(prev => prev - 20);
             }
-            if (direction === "right") {
+
+            if (msg === "right") {
                 setX(prev => prev + 20);
             }
-        });
+        };
 
-        connection.start()
-            .then(() => console.log("SignalR conectado"))
-            .catch(err => console.error("Error SignalR:", err));
+        socket.current.onerror = (e) => {
+            console.log("Error WebSocket", e);
+        };
 
         return () => {
-            connection.stop();
+            socket.current?.close();
         };
+
     }, []);
 
     return (
