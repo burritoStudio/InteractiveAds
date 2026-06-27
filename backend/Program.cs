@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.SignalR;
+using System.Net.WebSockets;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,7 +21,38 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+app.UseWebSockets();
+
 app.UseCors("cors");
+
+app.Map("/ws", async context =>
+{
+    if (!context.WebSockets.IsWebSocketRequest)
+    {
+        context.Response.StatusCode = 400;
+        return;
+    }
+
+    using var socket = await context.WebSockets.AcceptWebSocketAsync();
+
+    Console.WriteLine("Cliente WebSocket conectado");
+
+    var buffer = new byte[1024];
+
+    while (socket.State == WebSocketState.Open)
+    {
+        var result = await socket.ReceiveAsync(buffer, CancellationToken.None);
+
+        if (result.MessageType == WebSocketMessageType.Close)
+            break;
+
+        var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
+
+        Console.WriteLine($"Recibido: {message}");
+    }
+
+    Console.WriteLine("Cliente desconectado");
+});
 
 app.MapHub<GameHub>("/game");
 

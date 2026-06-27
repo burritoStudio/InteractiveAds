@@ -1,33 +1,33 @@
-﻿import * as signalR from "@microsoft/signalr";
-import { useEffect, useRef } from "react";
+﻿import { useEffect, useRef } from "react";
 
 export default function Play() {
 
-    const connection = useRef<signalR.HubConnection | null>(null);
+    const socket = useRef<WebSocket | null>(null);
 
     useEffect(() => {
 
-        const conn = new signalR.HubConnectionBuilder()
-            .withUrl("https://subventrally-excogitable-duncan.ngrok-free.dev/game")
-            .withAutomaticReconnect()
-            .build();
+        socket.current = new WebSocket("wss://subventrally-excogitable-duncan.ngrok-free.dev/ws");
 
-        connection.current = conn;
+        socket.current.onopen = () => {
+            console.log("WebSocket conectado");
+        };
 
-        conn.start()
-            .then(() => console.log("Celular conectado"))
-            .catch(err => console.error(err));
+        socket.current.onclose = () => {
+            console.log("WebSocket desconectado");
+        };
+
+        socket.current.onerror = (e) => {
+            console.error("Error WebSocket", e);
+        };
 
         return () => {
-            conn.stop();
+            socket.current?.close();
         };
 
     }, []);
 
-    async function move(dir: string) {
-        if (connection.current) {
-            await connection.current.send("Move", dir);
-        }
+    function move(dir: string) {
+        socket.current?.send(dir);
     }
 
     return (
