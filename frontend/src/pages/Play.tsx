@@ -30,6 +30,15 @@ export default function Play() {
         socket.current?.send(dir);
     }
 
+    function sendEvent(action: string) {
+        socket.current?.send(
+            JSON.stringify({
+                type: "event",
+                action: action
+            })
+        );
+    }
+
     return (
         <div style={{
             width: "100vw",
@@ -51,6 +60,13 @@ export default function Play() {
                 onClick={() => move("right")}
             >
                 ▶
+            </button>
+
+            <button
+                style={{ fontSize: 30, padding: 20 }}
+                onClick={() => sendEvent("Greeting")}
+            >
+                Greeting
             </button>
         </div>
     );

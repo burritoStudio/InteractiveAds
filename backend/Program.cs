@@ -1,5 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Net.WebSockets;
+using QRCoder;
+using System.Drawing;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -21,7 +23,7 @@ var app = builder.Build();
 app.UseWebSockets();
 app.UseCors("cors");
 
-// 🔥 CLIENTES CONECTADOS (THREAD SAFE)
+// CLIENTES CONECTADOS (THREAD SAFE)
 var clients = new ConcurrentDictionary<Guid, WebSocket>();
 
 app.Map("/ws", async context =>
@@ -54,7 +56,7 @@ app.Map("/ws", async context =>
 
             Console.WriteLine($"Recibido: {message}");
 
-            // 🔥 BROADCAST A TODOS LOS CLIENTES
+            // BROADCAST A TODOS LOS CLIENTES
             var data = Encoding.UTF8.GetBytes(message);
 
             foreach (var client in clients)
@@ -77,6 +79,47 @@ app.Map("/ws", async context =>
         socket.Dispose();
         Console.WriteLine("Cliente desconectado");
     }
+});
+
+app.MapGet("/join", (HttpContext ctx) =>
+{
+    var token = Guid.NewGuid().ToString("N");
+
+    Console.WriteLine($"Nuevo join: {token}");
+
+    return Results.Redirect(
+        $"https://853a213c.interactiveads.pages.dev/play?token={token}"
+    );
+});
+
+app.MapGet("/qr", () =>
+{
+    using var qrGenerator = new QRCodeGenerator();
+
+    var qrData = qrGenerator.CreateQrCode(
+        "https://subventrally-excogitable-duncan.ngrok-free.dev/join",
+        QRCodeGenerator.ECCLevel.Q);
+
+    var pngQr = new PngByteQRCode(qrData);
+
+    byte[] bytes = pngQr.GetGraphic(20);
+
+    return Results.File(bytes, "image/png");
+});
+
+app.MapGet("/session", (HttpContext ctx) =>
+{
+    var token = Guid.NewGuid().ToString("N");
+
+    return Results.Json(new
+    {
+        campaign = "Corona",
+        game = "Surf",
+        video = "Publicidad_Corona.mp4",
+        expires = 120,
+        joinUrl = $"https://subventrally-excogitable-duncan.ngrok-free.dev/join?token={token}",
+        qrUrl = $"https://subventrally-excogitable-duncan.ngrok-free.dev/qr"
+    });
 });
 
 app.MapGet("/", () => "Backend OK");
