@@ -68,6 +68,21 @@ export default function Play() {
             >
                 Greeting
             </button>
+
+            <button
+                style={{ fontSize: 30, padding: 20 }}
+                onClick={() => sendEvent("Dancing")}
+            >
+                Dancing
+            </button>
+
+            <button
+                style={{ fontSize: 30, padding: 20 }}
+                onClick={() => sendEvent("GoodBye")}
+            >
+                GoodBye
+            </button>
+
         </div>
     );
 }
